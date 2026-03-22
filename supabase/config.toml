@@ -1,0 +1,2 @@
+[functions.personal-coach]
+verify_jwt = false

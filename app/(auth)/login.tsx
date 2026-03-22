@@ -1,0 +1,162 @@
+import { useState } from "react";
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Link } from "expo-router";
+import { signIn } from "../../lib/auth";
+import { space, radius, useTheme } from "../../constants/theme";
+import { Display, Body, Caption } from "../../components/Typography";
+import Input from "../../components/Input";
+import Button from "../../components/Button";
+import { supabase } from "../../lib/supabase";
+import { useAuthStore } from "../../stores/authStore";
+import type { Profile } from "../../stores/authStore";
+
+function getErrorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "message" in err) {
+    return (err as { message: string }).message || "Something went wrong. Please try again.";
+  }
+  return "Something went wrong. Please try again.";
+}
+
+export default function LoginScreen() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { colors, isDark } = useTheme();
+
+  const { setSession, setProfile } = useAuthStore();
+
+  async function handleSignIn() {
+    setError(null);
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const data = await signIn(email.trim(), password);
+      setSession(data.session);
+
+      if (data.session?.user) {
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", data.session.user.id)
+            .single();
+          if (!profileError && profileData) setProfile(profileData as Profile);
+        } catch {
+          // Non-fatal — _layout.tsx onAuthStateChange will load the profile
+        }
+      }
+    } catch (err: unknown) {
+      console.error("[Login] signin error:", err);
+      setError(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={["top", "left", "right"]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
+        <View style={styles.inner}>
+          <View style={styles.header}>
+            <Display>Welcome back</Display>
+            <Body color={colors.textSecondary} style={{ marginTop: space.sm }}>
+              Sign in to continue your journey
+            </Body>
+          </View>
+
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={email}
+              onChangeText={(v) => { setEmail(v); setError(null); }}
+            />
+
+            <Input
+              label="Password"
+              placeholder="••••••••"
+              secureTextEntry
+              value={password}
+              onChangeText={(v) => { setPassword(v); setError(null); }}
+            />
+
+            {error ? (
+              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft, borderColor: colors.error }]}>
+                <Caption color={colors.error}>{error}</Caption>
+              </View>
+            ) : null}
+
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              title={submitting ? "Signing in\u2026" : "Sign In"}
+              loading={submitting}
+              onPress={handleSignIn}
+            />
+          </View>
+
+          <Link href="/(auth)/register" asChild>
+            <TouchableOpacity style={styles.linkRow} activeOpacity={0.7}>
+              <Body color={colors.textSecondary}>
+                Don't have an account?{" "}
+                <Body color={colors.accent}>Register</Body>
+              </Body>
+            </TouchableOpacity>
+          </Link>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  inner: {
+    flex: 1,
+    paddingHorizontal: space.xxl,
+    justifyContent: "center",
+  },
+  header: {
+    marginBottom: space.xxxl + space.xs,
+  },
+  form: {
+    gap: space.xs,
+    marginBottom: space.xxxl,
+  },
+  errorBox: {
+    borderWidth: 1,
+    borderRadius: radius.sm + 2,
+    paddingHorizontal: space.md + 2,
+    paddingVertical: space.md - 2,
+    marginBottom: space.lg,
+  },
+  linkRow: {
+    alignItems: "center",
+  },
+});
