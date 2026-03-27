@@ -27,6 +27,8 @@ import Card from "../../components/Card";
 import Chip from "../../components/Chip";
 import ProgressBar from "../../components/ProgressBar";
 import EmptyState from "../../components/EmptyState";
+import UpgradeBanner from "../../components/UpgradeBanner";
+import { useCanCreateObjective } from "../../hooks/useSubscription";
 
 const CADENCE_LABELS: Record<string, string> = {
   weekly: "Weekly",
@@ -107,6 +109,7 @@ export default function ObjectivesScreen() {
 
   const objectives = data ?? [];
   const preferredAreas = profile?.preferred_life_areas ?? [];
+  const canCreate = useCanCreateObjective(objectives.length);
 
   const onRefresh = useCallback(() => {
     refetch();
@@ -121,8 +124,12 @@ export default function ObjectivesScreen() {
 
   const handleFabPress = useCallback(() => {
     impactMedium();
+    if (!canCreate) {
+      router.push("/profile/upgrade");
+      return;
+    }
     router.push("/objectives/new");
-  }, [router]);
+  }, [router, canCreate]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -178,6 +185,9 @@ export default function ObjectivesScreen() {
           <Ionicons name="add" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Upgrade banner */}
+      {!canCreate && <UpgradeBanner />}
 
       {/* List */}
       <FlatList

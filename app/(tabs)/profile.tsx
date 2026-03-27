@@ -18,6 +18,7 @@ import { Display, BodyMedium, Body, Caption, Numeric } from "../../components/Ty
 import Card from "../../components/Card";
 import Avatar from "../../components/Avatar";
 import Chip from "../../components/Chip";
+import { useIsPro } from "../../hooks/useSubscription";
 
 // ─── Nav row ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,8 @@ export default function ProfileScreen() {
   const userId = user?.id;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const isPro = useIsPro();
 
   const { data: stats, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ["profileStats", userId],
@@ -164,17 +167,50 @@ export default function ProfileScreen() {
         )}
       </Card>
 
+      {/* ── Subscription ──────────────────────────────────── */}
+      <View style={styles.navSection}>
+        <Caption style={[styles.sectionLabel, { color: colors.textTertiary }]}>SUBSCRIPTION</Caption>
+        {isPro ? (
+          <NavRow
+            icon="star"
+            label="Pro Plan — Active"
+            onPress={() => router.push("/profile/upgrade")}
+          />
+        ) : (
+          <TouchableOpacity
+            style={[styles.upgradeBtn, { backgroundColor: colors.accent }]}
+            onPress={() => router.push("/profile/upgrade")}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="sparkles" size={18} color="#fff" />
+            <BodyMedium style={styles.upgradeLabel}>Upgrade to Pro</BodyMedium>
+            <Caption style={styles.upgradeSub}>Unlimited goals + full AI coaching</Caption>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* ── Navigation rows ───────────────────────────────── */}
       <View style={styles.navSection}>
-        <NavRow
-          icon="sparkles-outline"
-          label="Component Showcase"
-          onPress={() => router.push("/profile/showcase" as never)}
-        />
+        <Caption style={[styles.sectionLabel, { color: colors.textTertiary }]}>ACCOUNT</Caption>
         <NavRow
           icon="settings-outline"
           label="Settings"
           onPress={() => router.push("/profile/settings")}
+        />
+      </View>
+
+      {/* ── Legal ─────────────────────────────────────────── */}
+      <View style={styles.navSection}>
+        <Caption style={[styles.sectionLabel, { color: colors.textTertiary }]}>LEGAL</Caption>
+        <NavRow
+          icon="document-text-outline"
+          label="Terms & Conditions"
+          onPress={() => router.push("/profile/terms")}
+        />
+        <NavRow
+          icon="shield-checkmark-outline"
+          label="Privacy Policy"
+          onPress={() => router.push("/profile/privacy")}
         />
       </View>
 
@@ -286,6 +322,30 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     flex: 1,
+  },
+
+  // Section label
+  sectionLabel: {
+    letterSpacing: 0.8,
+    marginBottom: space.sm,
+  },
+
+  // Upgrade button
+  upgradeBtn: {
+    borderRadius: radius.lg,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.md + 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  upgradeLabel: {
+    color: "#fff",
+    fontWeight: "700",
+    flex: 1,
+  },
+  upgradeSub: {
+    color: "rgba(255,255,255,0.75)",
   },
 
   // Sign out

@@ -67,6 +67,7 @@ export async function signUp(
     password,
     options: {
       data: { full_name: fullName },
+      emailRedirectTo: "okrai-personal://auth/callback",
     },
   });
 

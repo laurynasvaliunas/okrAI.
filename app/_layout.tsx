@@ -74,7 +74,11 @@ function RootLayoutNav() {
       ),
     ])
       .then(({ data: { session: initialSession }, error }) => {
-        if (error) console.error("[Layout] getSession error:", error);
+        if (error) {
+          console.error("[Layout] getSession error:", error);
+          // Stale/invalid refresh token — clear it so the user is sent to login
+          void supabase.auth.signOut();
+        }
         if (initialSession) {
           setSession(initialSession);
           void logInPurchases(initialSession.user.id);
@@ -103,6 +107,13 @@ function RootLayoutNav() {
       setSession(newSession);
 
       if (event === "SIGNED_OUT") {
+        void logOutPurchases();
+        signOut();
+        setLoading(false);
+        return;
+      }
+
+      if (event === "TOKEN_REFRESHED" && !newSession) {
         void logOutPurchases();
         signOut();
         setLoading(false);

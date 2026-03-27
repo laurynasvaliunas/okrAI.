@@ -1,14 +1,13 @@
 import { View, StyleSheet } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import RevenueCatUI from "react-native-purchases-ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../constants/theme";
 import { useAuthStore } from "../../stores/authStore";
 
 export default function UpgradeScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.user?.id);
 
@@ -18,7 +17,7 @@ export default function UpgradeScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <RevenueCatUI.Paywall
         options={{ displayCloseButton: true }}
         onDismiss={handleDismiss}
@@ -32,6 +31,5 @@ export default function UpgradeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.bg,
   },
 });

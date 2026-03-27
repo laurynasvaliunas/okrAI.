@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { C, space, radius } from "../constants/theme";
+import { space, radius, useTheme } from "../constants/theme";
 import { Title2, Title3, BodyMedium, Body, Caption, Label, Small } from "./Typography";
 import Button from "./Button";
 import { createKeyResult } from "../lib/queries";
@@ -68,7 +68,7 @@ const LOCAL_SUGGESTIONS: Record<string, KrSuggestion[]> = {
 
 function endOfWeek(): string {
   const d = new Date();
-  const day = d.getDay(); // 0 = Sunday
+  const day = d.getDay();
   const daysUntilSunday = day === 0 ? 7 : 7 - day;
   d.setDate(d.getDate() + daysUntilSunday);
   return d.toISOString().split("T")[0];
@@ -116,6 +116,8 @@ function SuggestionCard({
   suggestion: KrSuggestion;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+
   const metricLabel =
     suggestion.metric_type === "boolean"
       ? "Done"
@@ -129,19 +131,23 @@ function SuggestionCard({
       : `${suggestion.target_value}${suggestion.unit ? " " + suggestion.unit : ""}`;
 
   return (
-    <TouchableOpacity style={s.suggestionCard} onPress={onPress} activeOpacity={0.75}>
+    <TouchableOpacity
+      style={[s.suggestionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
       <View style={s.suggestionCardTop}>
         <BodyMedium style={s.suggestionTitle} numberOfLines={2}>
           {suggestion.title}
         </BodyMedium>
         <View style={s.suggestionMeta}>
-          <View style={s.metricBadge}>
-            <Small color={C.accent}>{metricLabel}</Small>
+          <View style={[s.metricBadge, { backgroundColor: colors.accentMuted }]}>
+            <Small color={colors.accent}>{metricLabel}</Small>
           </View>
-          <Caption color={C.textSecondary}>{targetDisplay}</Caption>
+          <Caption color={colors.textSecondary}>{targetDisplay}</Caption>
         </View>
       </View>
-      <Caption color={C.textTertiary} style={s.suggestionRationale}>
+      <Caption color={colors.textTertiary} style={s.suggestionRationale}>
         {suggestion.rationale}
       </Caption>
     </TouchableOpacity>
@@ -151,7 +157,8 @@ function SuggestionCard({
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
-  return <View style={s.skeletonCard} />;
+  const { colors } = useTheme();
+  return <View style={[s.skeletonCard, { backgroundColor: colors.surface }]} />;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -182,6 +189,7 @@ export default function AddKrSheet({
   onAdded,
 }: AddKrSheetProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   // Step state
   const [step, setStep] = useState<"suggestions" | "form">("suggestions");
@@ -215,7 +223,6 @@ export default function AddKrSheet({
       );
       setSuggestions(results);
     } catch {
-      // Fall back to local suggestions
       const fallback = LOCAL_SUGGESTIONS[lifeArea] ?? LOCAL_SUGGESTIONS.other;
       setSuggestions(fallback);
     } finally {
@@ -243,19 +250,19 @@ export default function AddKrSheet({
     setFormError(null);
   }
 
-  function fillFormFromSuggestion(s: KrSuggestion) {
-    setTitle(s.title);
-    setMetricType(s.metric_type);
-    setStartVal(String(s.start_value));
-    setTargetVal(s.metric_type === "boolean" ? "1" : String(s.target_value));
-    setUnit(s.unit ?? "");
+  function fillFormFromSuggestion(sg: KrSuggestion) {
+    setTitle(sg.title);
+    setMetricType(sg.metric_type);
+    setStartVal(String(sg.start_value));
+    setTargetVal(sg.metric_type === "boolean" ? "1" : String(sg.target_value));
+    setUnit(sg.unit ?? "");
     setDueDate(null);
     setFormError(null);
   }
 
-  function handleSelectSuggestion(s: KrSuggestion) {
-    setChosenSuggestion(s);
-    fillFormFromSuggestion(s);
+  function handleSelectSuggestion(sg: KrSuggestion) {
+    setChosenSuggestion(sg);
+    fillFormFromSuggestion(sg);
     setStep("form");
   }
 
@@ -316,14 +323,14 @@ export default function AddKrSheet({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View style={s.overlay}>
+      <View style={[s.overlay, { backgroundColor: colors.scrim }]}>
         <KeyboardAvoidingView
           style={s.sheetWrapper}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={[s.sheet, { paddingBottom: insets.bottom + space.xl }]}>
+          <View style={[s.sheet, { backgroundColor: colors.surfaceElevated, paddingBottom: insets.bottom + space.xl }]}>
             {/* Handle bar */}
-            <View style={s.handle} />
+            <View style={[s.handle, { backgroundColor: colors.border }]} />
 
             <ScrollView
               showsVerticalScrollIndicator={false}
@@ -336,12 +343,12 @@ export default function AddKrSheet({
                   <View style={s.sheetHeader}>
                     <View style={s.flex1} />
                     <TouchableOpacity onPress={onClose} style={s.closeBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="close" size={22} color={C.textSecondary} />
+                      <Ionicons name="close" size={22} color={colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
 
                   <Title2 style={s.sheetTitle}>What will you measure?</Title2>
-                  <Body color={C.textSecondary} style={s.sheetSubtitle}>
+                  <Body color={colors.textSecondary} style={s.sheetSubtitle}>
                     Great key results are specific, measurable, and time-bound.
                   </Body>
 
@@ -352,17 +359,17 @@ export default function AddKrSheet({
                       <SkeletonCard />
                     </>
                   ) : (
-                    suggestions.map((s, i) => (
+                    suggestions.map((sg, i) => (
                       <SuggestionCard
                         key={i}
-                        suggestion={s}
-                        onPress={() => handleSelectSuggestion(s)}
+                        suggestion={sg}
+                        onPress={() => handleSelectSuggestion(sg)}
                       />
                     ))
                   )}
 
                   <TouchableOpacity onPress={handleStartFromScratch} style={s.scratchLink}>
-                    <Body color={C.accent}>Start from scratch →</Body>
+                    <Body color={colors.accent}>Start from scratch →</Body>
                   </TouchableOpacity>
                 </>
               ) : (
@@ -374,20 +381,20 @@ export default function AddKrSheet({
                       style={s.backBtn}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <Ionicons name="arrow-back" size={22} color={C.accent} />
+                      <Ionicons name="arrow-back" size={22} color={colors.accent} />
                     </TouchableOpacity>
                     <View style={s.flex1} />
                     <TouchableOpacity onPress={onClose} style={s.closeBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="close" size={22} color={C.textSecondary} />
+                      <Ionicons name="close" size={22} color={colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
 
                   {/* Title field */}
-                  <Label style={s.fieldLabel}>KEY RESULT</Label>
+                  <Label style={[s.fieldLabel, { color: colors.textTertiary }]}>KEY RESULT</Label>
                   <TextInput
-                    style={s.titleInput}
+                    style={[s.titleInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
                     placeholder={placeholder}
-                    placeholderTextColor={C.placeholder}
+                    placeholderTextColor={colors.placeholder}
                     value={title}
                     onChangeText={(v) => { setTitle(v); setFormError(null); }}
                     multiline
@@ -396,28 +403,31 @@ export default function AddKrSheet({
 
                   {/* Rationale hint */}
                   {chosenSuggestion ? (
-                    <View style={s.rationaleBox}>
-                      <Caption color={C.accent}>{chosenSuggestion.rationale}</Caption>
+                    <View style={[s.rationaleBox, { backgroundColor: colors.accentMuted, borderLeftColor: colors.accent }]}>
+                      <Caption color={colors.accent}>{chosenSuggestion.rationale}</Caption>
                     </View>
                   ) : null}
 
                   {/* Metric type selector */}
-                  <Label style={[s.fieldLabel, { marginTop: space.xl }]}>METRIC TYPE</Label>
+                  <Label style={[s.fieldLabel, { marginTop: space.xl, color: colors.textTertiary }]}>METRIC TYPE</Label>
                   <View style={s.metricRow}>
                     {METRIC_OPTIONS.map((opt) => {
                       const selected = metricType === opt.id;
                       return (
                         <TouchableOpacity
                           key={opt.id}
-                          style={[s.metricCard, selected && s.metricCardSelected]}
+                          style={[
+                            s.metricCard,
+                            { backgroundColor: selected ? colors.accentMuted : colors.surface, borderColor: selected ? colors.accent : colors.border },
+                          ]}
                           onPress={() => { setMetricType(opt.id); setFormError(null); }}
                           activeOpacity={0.75}
                         >
                           <Body style={s.metricIcon}>{opt.icon}</Body>
-                          <Small color={selected ? C.accent : C.textPrimary} style={s.metricLabel}>
+                          <Small color={selected ? colors.accent : colors.textPrimary} style={s.metricLabel}>
                             {opt.label}
                           </Small>
-                          <Caption color={C.textTertiary} style={s.metricSub} numberOfLines={2}>
+                          <Caption color={colors.textTertiary} style={s.metricSub} numberOfLines={2}>
                             {opt.sub}
                           </Caption>
                         </TouchableOpacity>
@@ -430,42 +440,42 @@ export default function AddKrSheet({
                     <>
                       <View style={s.valuesRow}>
                         <View style={s.flex1}>
-                          <Label style={s.fieldLabel}>START</Label>
+                          <Label style={[s.fieldLabel, { color: colors.textTertiary }]}>START</Label>
                           <TextInput
-                            style={s.numericInput}
+                            style={[s.numericInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
                             value={startVal}
                             onChangeText={setStartVal}
                             keyboardType="numeric"
                             placeholder="0"
-                            placeholderTextColor={C.placeholder}
+                            placeholderTextColor={colors.placeholder}
                           />
                         </View>
                         <View style={s.valueGap} />
                         <View style={s.flex1}>
-                          <Label style={s.fieldLabel}>TARGET</Label>
+                          <Label style={[s.fieldLabel, { color: colors.textTertiary }]}>TARGET</Label>
                           <TextInput
-                            style={s.numericInput}
+                            style={[s.numericInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
                             value={targetVal}
                             onChangeText={(v) => { setTargetVal(v); setFormError(null); }}
                             keyboardType="numeric"
                             placeholder="100"
-                            placeholderTextColor={C.placeholder}
+                            placeholderTextColor={colors.placeholder}
                           />
                         </View>
                       </View>
-                      <Label style={[s.fieldLabel, { marginTop: space.lg }]}>UNIT</Label>
+                      <Label style={[s.fieldLabel, { marginTop: space.lg, color: colors.textTertiary }]}>UNIT</Label>
                       <TextInput
-                        style={s.unitInput}
+                        style={[s.unitInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
                         value={unit}
                         onChangeText={setUnit}
                         placeholder="km, hrs, $, pages…"
-                        placeholderTextColor={C.placeholder}
+                        placeholderTextColor={colors.placeholder}
                       />
                     </>
                   )}
 
                   {/* Timeline */}
-                  <Label style={[s.fieldLabel, { marginTop: space.xl }]}>DUE DATE</Label>
+                  <Label style={[s.fieldLabel, { marginTop: space.xl, color: colors.textTertiary }]}>DUE DATE</Label>
                   <View style={s.dueDateRow}>
                     {[
                       { label: "This week", value: endOfWeek() },
@@ -477,11 +487,14 @@ export default function AddKrSheet({
                       return (
                         <TouchableOpacity
                           key={opt.label}
-                          style={[s.dueDateChip, selected && s.dueDateChipSelected]}
+                          style={[
+                            s.dueDateChip,
+                            { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accentMuted : colors.surface },
+                          ]}
                           onPress={() => setDueDate(opt.value)}
                           activeOpacity={0.75}
                         >
-                          <Caption color={selected ? C.accent : C.textSecondary}>{opt.label}</Caption>
+                          <Caption color={selected ? colors.accent : colors.textSecondary}>{opt.label}</Caption>
                         </TouchableOpacity>
                       );
                     })}
@@ -489,8 +502,8 @@ export default function AddKrSheet({
 
                   {/* Error */}
                   {formError ? (
-                    <View style={s.errorBox}>
-                      <Caption color={C.error}>{formError}</Caption>
+                    <View style={[s.errorBox, { backgroundColor: colors.errorSoft }]}>
+                      <Caption color={colors.error}>{formError}</Caption>
                     </View>
                   ) : null}
 
@@ -515,19 +528,17 @@ export default function AddKrSheet({
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles (no colors — all color-dependent styles are inline above) ─────────
 
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: C.scrim,
     justifyContent: "flex-end",
   },
   sheetWrapper: {
     width: "100%",
   },
   sheet: {
-    backgroundColor: C.surfaceElevated,
     borderTopLeftRadius: radius.xxl,
     borderTopRightRadius: radius.xxl,
     paddingHorizontal: space.xl,
@@ -538,7 +549,6 @@ const s = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: radius.full,
-    backgroundColor: C.border,
     alignSelf: "center",
     marginBottom: space.lg,
   },
@@ -546,7 +556,6 @@ const s = StyleSheet.create({
     paddingBottom: space.lg,
   },
 
-  // Header row
   sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -562,7 +571,6 @@ const s = StyleSheet.create({
     flex: 1,
   },
 
-  // Suggestions step
   sheetTitle: {
     marginBottom: space.sm,
   },
@@ -571,12 +579,10 @@ const s = StyleSheet.create({
   },
 
   suggestionCard: {
-    backgroundColor: C.surface,
     borderRadius: radius.md,
     padding: space.lg,
     marginBottom: space.md,
     borderWidth: 1,
-    borderColor: C.border,
   },
   suggestionCardTop: {
     flexDirection: "row",
@@ -594,7 +600,6 @@ const s = StyleSheet.create({
     gap: space.xs,
   },
   metricBadge: {
-    backgroundColor: C.accentMuted,
     borderRadius: radius.xs,
     paddingHorizontal: space.sm,
     paddingVertical: 2,
@@ -606,7 +611,6 @@ const s = StyleSheet.create({
   skeletonCard: {
     height: 88,
     borderRadius: radius.md,
-    backgroundColor: C.surface,
     marginBottom: space.md,
   },
 
@@ -615,32 +619,25 @@ const s = StyleSheet.create({
     paddingVertical: space.xl,
   },
 
-  // Form step
   fieldLabel: {
     marginBottom: space.sm,
-    color: C.textTertiary,
     letterSpacing: 0.8,
   },
   titleInput: {
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.border,
     borderRadius: radius.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     fontSize: 16,
-    color: C.textPrimary,
     lineHeight: 24,
     minHeight: 56,
   },
   rationaleBox: {
-    backgroundColor: C.accentMuted,
     borderRadius: radius.sm,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     marginTop: space.sm,
     borderLeftWidth: 2,
-    borderLeftColor: C.accent,
   },
 
   metricRow: {
@@ -649,16 +646,10 @@ const s = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.border,
     borderRadius: radius.md,
     padding: space.md,
     alignItems: "center",
-  },
-  metricCardSelected: {
-    borderColor: C.accent,
-    backgroundColor: C.accentMuted,
   },
   metricIcon: {
     fontSize: 20,
@@ -682,26 +673,20 @@ const s = StyleSheet.create({
     width: space.md,
   },
   numericInput: {
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.border,
     borderRadius: radius.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     fontSize: 18,
     fontWeight: "600",
-    color: C.textPrimary,
     textAlign: "center",
   },
   unitInput: {
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.border,
     borderRadius: radius.md,
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     fontSize: 15,
-    color: C.textPrimary,
   },
 
   dueDateRow: {
@@ -714,16 +699,9 @@ const s = StyleSheet.create({
     paddingVertical: space.sm,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.surface,
-  },
-  dueDateChipSelected: {
-    borderColor: C.accent,
-    backgroundColor: C.accentMuted,
   },
 
   errorBox: {
-    backgroundColor: C.errorSoft,
     borderWidth: 1,
     borderColor: "rgba(255,107,107,0.3)",
     borderRadius: radius.sm,

@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     borderRadius: radius.full,
     borderWidth: 1,
+    justifyContent: "center",
   },
   badge: {
     paddingHorizontal: space.sm,

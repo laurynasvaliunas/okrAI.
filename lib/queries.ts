@@ -211,9 +211,8 @@ export async function updateKeyResultProgress(
   // Record check-in
   const { error: ciError } = await supabase.from("check_ins").insert({
     key_result_id: krId,
-    owner_id: userId,
-    organization_id: null,
-    value,
+    user_id: userId,
+    progress_value: value,
   });
 
   if (ciError) throw ciError;
@@ -302,8 +301,7 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
     supabase
       .from("check_ins")
       .select("id", { count: "exact", head: true })
-      .is("organization_id", null)
-      .eq("owner_id", userId),
+      .eq("user_id", userId),
     // Weekly reflective check-ins (stored in ai_coaching_sessions)
     supabase
       .from("ai_coaching_sessions")
