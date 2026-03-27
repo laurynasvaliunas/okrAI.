@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -8,6 +8,7 @@ import { useAuthStore } from "../stores/authStore";
 import type { Profile } from "../stores/authStore";
 import { initializePurchases, logInPurchases, logOutPurchases } from "../lib/purchases";
 import { ThemeProvider, useTheme } from "../constants/theme";
+import SplashAnimation from "../components/SplashAnimation";
 
 async function ensureProfile(userId: string, userEmail: string | undefined, userMetadata: Record<string, unknown>) {
   const { data: existing, error: fetchError } = await supabase
@@ -58,6 +59,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const { colors } = useTheme();
   const [appReady, setAppReady] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
 
   console.log("[Layout] appReady:", appReady, "userId:", session?.user?.id);
 
@@ -184,17 +186,12 @@ function RootLayoutNav() {
     []
   );
 
-  if (!appReady) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg }}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
-      <Slot />
+      {(!appReady || !splashDone) && (
+        <SplashAnimation onDone={() => setSplashDone(true)} />
+      )}
+      {appReady && <Slot />}
     </QueryClientProvider>
   );
 }
