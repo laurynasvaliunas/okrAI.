@@ -58,7 +58,12 @@ export default React.memo(function Chip({
     [colors, selected, isBadge]
   );
 
-  const content = (
+  const content = isArea ? (
+    <>
+      {emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
+      <Text style={[textStyle, styles.areaText]}>{label}</Text>
+    </>
+  ) : (
     <>
       {emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
       <Text style={textStyle}>{isBadge ? label.toUpperCase() : label}</Text>
@@ -95,11 +100,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   area: {
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.sm,
     paddingVertical: space.sm,
-    borderRadius: radius.full,
+    borderRadius: radius.lg,
     borderWidth: 1,
     justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "column",
+    gap: 2,
+    minHeight: 56,
+  },
+  areaText: {
+    textAlign: "center",
+    fontSize: 11,
+    lineHeight: 14,
   },
   badge: {
     paddingHorizontal: space.sm,
