@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "okrai-personal",
+    "name": "okrAI",
     "slug": "okrai-personal",
     "scheme": "okrai-personal",
     "version": "1.0.0",
@@ -10,21 +10,30 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0B0D0D"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.okrai-personal"
+      "bundleIdentifier": "com.clyzio.okrai",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This identifier helps us improve your experience and measure ad effectiveness.",
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0D0D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.okraipersonal"
+      "package": "com.clyzio.okrai",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +41,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#D97758"
+        }
+      ],
       "./plugins/fix-swift-concurrency"
     ]
   }

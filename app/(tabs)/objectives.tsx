@@ -140,8 +140,10 @@ export default function ObjectivesScreen() {
         <Display>Goals</Display>
         <TouchableOpacity
           style={[styles.addBtn, { backgroundColor: colors.surface }, shadows.sm]}
-          onPress={() => router.push("/objectives/new")}
+          onPress={handleFabPress}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Create new goal"
         >
           <Ionicons name="add" size={22} color={colors.accent} />
         </TouchableOpacity>

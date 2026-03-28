@@ -155,6 +155,7 @@ export default function NewObjectiveScreen() {
             value={title}
             onChangeText={(v) => { setTitle(v); setError(null); }}
             autoFocus
+            maxLength={120}
           />
           {aiHint ? (
             <View style={[styles.hintBox, { backgroundColor: colors.accentMuted, borderLeftColor: colors.accent }]}>
@@ -216,6 +217,7 @@ export default function NewObjectiveScreen() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
+            maxLength={500}
           />
         </View>
       </ScrollView>

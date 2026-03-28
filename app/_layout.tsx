@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View } from "react-native";
+
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -9,6 +9,7 @@ import type { Profile } from "../stores/authStore";
 import { initializePurchases, logInPurchases, logOutPurchases } from "../lib/purchases";
 import { ThemeProvider, useTheme } from "../constants/theme";
 import SplashAnimation from "../components/SplashAnimation";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 async function ensureProfile(userId: string, userEmail: string | undefined, userMetadata: Record<string, unknown>) {
   const { data: existing, error: fetchError } = await supabase
@@ -61,7 +62,7 @@ function RootLayoutNav() {
   const [appReady, setAppReady] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
 
-  console.log("[Layout] appReady:", appReady, "userId:", session?.user?.id);
+  if (__DEV__) console.log("[Layout] appReady:", appReady, "userId:", session?.user?.id);
 
   useEffect(() => {
     initializePurchases();
@@ -105,7 +106,7 @@ function RootLayoutNav() {
       });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log("[Layout] auth event:", event);
+      if (__DEV__) console.log("[Layout] auth event:", event);
       setSession(newSession);
 
       if (event === "SIGNED_OUT") {
@@ -198,10 +199,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <RootLayoutNav />
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider>
+          <RootLayoutNav />
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
