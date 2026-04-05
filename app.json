@@ -15,12 +15,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.clyzio.okrai",
+      "buildNumber": "1",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "This identifier helps us improve your experience and measure ad effectiveness.",
         "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#0B0D0D",
         "foregroundImage": "./assets/android-icon-foreground.png",
