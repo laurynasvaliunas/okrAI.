@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.99.2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +45,27 @@ function buildMessages(
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS });
+  }
+
+  // Verify JWT — reject unauthenticated requests
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ error: "Missing authorization token" }),
+      { status: 401, headers: { ...CORS, "Content-Type": "application/json" } }
+    );
+  }
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user: authUser }, error: authError } = await supabaseClient.auth.getUser();
+  if (authError || !authUser) {
+    return new Response(
+      JSON.stringify({ error: "Invalid or expired token" }),
+      { status: 401, headers: { ...CORS, "Content-Type": "application/json" } }
+    );
   }
 
   try {

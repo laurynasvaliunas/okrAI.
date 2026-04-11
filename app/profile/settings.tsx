@@ -1,12 +1,22 @@
-import { View, StyleSheet, ScrollView, Switch, StatusBar, TouchableOpacity } from "react-native";
+import { View, StyleSheet, ScrollView, Switch, StatusBar, TouchableOpacity, Alert, Linking, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { space, radius, useTheme, type ThemePreference } from "../../constants/theme";
 import { Title2, Body, Caption } from "../../components/Typography";
 import Card from "../../components/Card";
 import { impactLight } from "../../lib/haptics";
+import { useAuthStore } from "../../stores/authStore";
+import { useIsPro } from "../../hooks/useSubscription";
+import { supabase } from "../../lib/supabase";
+import { logOutPurchases } from "../../lib/purchases";
+
+const STORAGE_KEYS = {
+  notifications: "@okrai/setting_notifications",
+  toneBalanced: "@okrai/setting_tone_balanced",
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -14,6 +24,31 @@ export default function SettingsScreen() {
   const { colors, isDark, preference, setPreference } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [toneBalanced, setToneBalanced] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const { signOut: storeSignOut } = useAuthStore();
+  const isPro = useIsPro();
+
+  // Load persisted settings
+  useEffect(() => {
+    (async () => {
+      const [savedNotif, savedTone] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.notifications),
+        AsyncStorage.getItem(STORAGE_KEYS.toneBalanced),
+      ]);
+      if (savedNotif !== null) setNotifications(savedNotif === "true");
+      if (savedTone !== null) setToneBalanced(savedTone === "true");
+    })();
+  }, []);
+
+  const persistNotifications = useCallback((v: boolean) => {
+    setNotifications(v);
+    void AsyncStorage.setItem(STORAGE_KEYS.notifications, String(v));
+  }, []);
+
+  const persistTone = useCallback((v: boolean) => {
+    setToneBalanced(v);
+    void AsyncStorage.setItem(STORAGE_KEYS.toneBalanced, String(v));
+  }, []);
 
   function cycleTheme() {
     impactLight();
@@ -68,7 +103,7 @@ export default function SettingsScreen() {
               value={notifications}
               onValueChange={(v) => {
                 impactLight();
-                setNotifications(v);
+                persistNotifications(v);
               }}
               trackColor={{ false: colors.border, true: colors.accentMuted }}
               thumbColor={notifications ? colors.accent : colors.placeholder}
@@ -84,23 +119,104 @@ export default function SettingsScreen() {
               value={toneBalanced}
               onValueChange={(v) => {
                 impactLight();
-                setToneBalanced(v);
+                persistTone(v);
               }}
               trackColor={{ false: colors.border, true: colors.accentMuted }}
               thumbColor={toneBalanced ? colors.accent : colors.placeholder}
             />
           </View>
           <Caption color={colors.textTertiary} style={styles.hint}>
-            When off, coach responses skew more direct. (Stored locally for now.)
+            When off, coach responses skew more direct.
           </Caption>
+        </Card>
+
+        <Card elevation="sm" style={styles.card}>
+          <RowLabel title="Subscription" subtitle="Manage your plan" />
+          {isPro ? (
+            <>
+              <TouchableOpacity
+                style={styles.rowBtn}
+                onPress={() => {
+                  const url = Platform.select({
+                    ios: "https://apps.apple.com/account/subscriptions",
+                    android: "https://play.google.com/store/account/subscriptions",
+                    default: "",
+                  });
+                  if (url) Linking.openURL(url);
+                }}
+                accessibilityRole="button"
+              >
+                <Body>Manage subscription</Body>
+                <Ionicons name="open-outline" size={16} color={colors.accent} />
+              </TouchableOpacity>
+              <Caption color={colors.textTertiary} style={styles.hint}>
+                Opens your {Platform.OS === "ios" ? "App Store" : "Google Play"} subscription settings.
+              </Caption>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.rowBtn}
+              onPress={() => router.push("/profile/upgrade")}
+              accessibilityRole="button"
+            >
+              <Body>Upgrade to Pro</Body>
+              <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+            </TouchableOpacity>
+          )}
         </Card>
 
         <Card elevation="sm" style={styles.card}>
           <RowLabel title="Data & privacy" subtitle="Your objectives stay private to this account" />
           <Body color={colors.textSecondary} style={styles.privacy}>
-            We minimize retention of coaching transcripts and never sell your data. Export and account deletion can
-            plug into Supabase policies in production.
+            We never sell your data. Your goals and coaching history are stored securely and only accessible to you.
           </Body>
+        </Card>
+
+        <Card elevation="sm" style={[styles.card, { borderColor: colors.error, borderWidth: StyleSheet.hairlineWidth }]}>
+          <RowLabel title="Danger zone" subtitle="Permanent actions" />
+          <TouchableOpacity
+            style={[styles.deleteBtn, { borderColor: colors.error }]}
+            onPress={() => {
+              Alert.alert(
+                "Delete Account",
+                "This will permanently delete your account, all goals, key results, check-ins, and coaching history. This action cannot be undone.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete Forever",
+                    style: "destructive",
+                    onPress: async () => {
+                      setDeleting(true);
+                      try {
+                        // Delete user data from profiles (cascades to objectives, key results, etc.)
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                          await supabase.from("coaching_sessions").delete().eq("user_id", user.id);
+                          await supabase.from("profiles").delete().eq("id", user.id);
+                        }
+                        await logOutPurchases();
+                        await supabase.auth.signOut();
+                        storeSignOut();
+                        router.replace("/(auth)/login");
+                      } catch (err) {
+                        console.error("[Settings] delete account error:", err);
+                        Alert.alert("Error", "Could not delete your account. Please try again or contact support at privacy@okrai.io.");
+                      } finally {
+                        setDeleting(false);
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+            activeOpacity={0.8}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Delete account"
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Body color={colors.error}>{deleting ? "Deleting…" : "Delete My Account"}</Body>
+          </TouchableOpacity>
         </Card>
       </ScrollView>
     </View>
@@ -156,6 +272,16 @@ const styles = StyleSheet.create({
   },
   privacy: {
     lineHeight: 22,
+    marginTop: space.xs,
+  },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: space.sm,
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingVertical: space.md,
     marginTop: space.xs,
   },
 });

@@ -16,6 +16,7 @@
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/slider": "5.1.2",
     "@revenuecat/purchases-typescript-internal": "^17.52.0",
+    "@sentry/react-native": "^8.7.0",
     "@supabase/supabase-js": "^2.99.2",
     "@tanstack/react-query": "^5.90.21",
     "babel-preset-expo": "~55.0.8",

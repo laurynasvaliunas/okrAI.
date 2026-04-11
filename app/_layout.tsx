@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Slot, useRouter, useSegments } from "expo-router";
+import * as Sentry from "@sentry/react-native";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore";
 import type { Profile } from "../stores/authStore";
@@ -10,6 +11,23 @@ import { initializePurchases, logInPurchases, logOutPurchases } from "../lib/pur
 import { ThemeProvider, useTheme } from "../constants/theme";
 import SplashAnimation from "../components/SplashAnimation";
 import ErrorBoundary from "../components/ErrorBoundary";
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN ?? "",
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
+
+/** Promise.race with a timeout that cleans up after itself. */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise<T>((resolve) => {
+      timer = setTimeout(() => resolve(fallback), ms);
+    }),
+  ]);
+}
 
 async function ensureProfile(userId: string, userEmail: string | undefined, userMetadata: Record<string, unknown>) {
   const { data: existing, error: fetchError } = await supabase
@@ -67,15 +85,11 @@ function RootLayoutNav() {
   useEffect(() => {
     initializePurchases();
 
-    Promise.race([
+    withTimeout(
       supabase.auth.getSession(),
-      new Promise<{ data: { session: null }; error: null }>((resolve) =>
-        setTimeout(() => {
-          console.warn("[Layout] getSession timed out — proceeding without session");
-          resolve({ data: { session: null }, error: null });
-        }, 8000)
-      ),
-    ])
+      8000,
+      { data: { session: null }, error: null } as Awaited<ReturnType<typeof supabase.auth.getSession>>
+    )
       .then(({ data: { session: initialSession }, error }) => {
         if (error) {
           console.error("[Layout] getSession error:", error);
@@ -85,14 +99,15 @@ function RootLayoutNav() {
         if (initialSession) {
           setSession(initialSession);
           void logInPurchases(initialSession.user.id);
-          void Promise.race([
+          void withTimeout(
             ensureProfile(
               initialSession.user.id,
               initialSession.user.email,
               initialSession.user.user_metadata ?? {}
             ),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
-          ]).then((profileData) => {
+            8000,
+            null
+          ).then((profileData) => {
             if (profileData) setProfile(profileData);
           });
         }
@@ -126,14 +141,15 @@ function RootLayoutNav() {
       if (newSession?.user) {
         try {
           await logInPurchases(newSession.user.id);
-          const profileData = await Promise.race([
+          const profileData = await withTimeout(
             ensureProfile(
               newSession.user.id,
               newSession.user.email,
               newSession.user.user_metadata ?? {}
             ),
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
-          ]);
+            8000,
+            null
+          );
           if (profileData) setProfile(profileData);
         } catch (err) {
           console.error("[Layout] profile load error:", err);
@@ -180,7 +196,7 @@ function RootLayoutNav() {
         defaultOptions: {
           queries: {
             staleTime: 1000 * 60 * 5,
-            retry: 0,
+            retry: 2,
           },
         },
       }),
