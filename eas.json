@@ -13,12 +13,18 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SENTRY_DSN": "https://d816c49e39c12c91b973818ae904cad3@o4511206443581440.ingest.de.sentry.io/4511206472810576"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SENTRY_DSN": "https://d816c49e39c12c91b973818ae904cad3@o4511206443581440.ingest.de.sentry.io/4511206472810576"
+      },
       "ios": {
         "resourceClass": "m-medium"
       },
