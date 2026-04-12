@@ -191,7 +191,7 @@ export default function SettingsScreen() {
                         // Delete user data from profiles (cascades to objectives, key results, etc.)
                         const { data: { user } } = await supabase.auth.getUser();
                         if (user) {
-                          await supabase.from("coaching_sessions").delete().eq("user_id", user.id);
+                          await supabase.from("ai_coaching_sessions").delete().eq("user_id", user.id);
                           await supabase.from("profiles").delete().eq("id", user.id);
                         }
                         await logOutPurchases();
